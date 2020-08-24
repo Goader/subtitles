@@ -9,6 +9,6 @@ def recognize(audio_filepath, durations):
             try:
                 audio = r.record(source, duration=duration)
                 texts.append(r.recognize_google(audio))
-            except Exception:
+            except sr.UnknownValueError:
                 texts.append('')
     return texts
