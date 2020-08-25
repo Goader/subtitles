@@ -1,9 +1,9 @@
 from video_proc import draw_subtitles, cleanup
 from moviepy.editor import VideoFileClip
+import os
 
 
 if __name__ == '__main__':
-    audio_filepath = None
     try:
         filename = input('Enter filepath:\t\t')
         output_filename = input('Enter final name:\t')
@@ -16,3 +16,5 @@ if __name__ == '__main__':
         clip.write_videofile(output_filename, codec='png', threads=12)  # this codec stands for .avi files
     except KeyboardInterrupt:
         cleanup()
+        if os.path.exists('temp'):
+            os.rmdir('temp')

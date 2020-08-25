@@ -1,13 +1,13 @@
 import speech_recognition as sr
 
 
-def recognize(audio_filepath, durations):
+def recognize(audio_filenames, durations):
     texts = []
     r = sr.Recognizer()
-    with sr.AudioFile('audio.wav') as source:
-        for duration in durations:
+    for audio_filename, duration in zip(audio_filenames, durations):
+        with sr.AudioFile(audio_filename) as source:
             try:
-                audio = r.record(source, duration=duration)
+                audio = r.record(source)
                 texts.append(r.recognize_google(audio))
             except sr.UnknownValueError:
                 texts.append('')
