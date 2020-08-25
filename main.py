@@ -11,7 +11,7 @@ if __name__ == '__main__':
         if clip.size[0] < 256 or clip.size[1] < 144:
             raise ValueError('Too small resolution. Must be: height >= 144, width >= 256')
 
-        #clip = draw_subtitles(clip)
+        clip = draw_subtitles(clip)
 
         clip.write_videofile(output_filename, codec='png', threads=12)  # this codec stands for .avi files
     except KeyboardInterrupt:

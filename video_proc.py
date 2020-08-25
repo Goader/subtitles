@@ -34,7 +34,7 @@ def add_overlay(clip, text, font):
         return clip
     img_clip = draw_overlay(text, clip.size, font, clip.duration)
 
-    return mp.CompositeVideoClip([clip, img_clip]).set_duration(clip)
+    return mp.CompositeVideoClip([clip, img_clip]).set_duration(clip.duration)
 
 
 # return the final version of VideoClip
