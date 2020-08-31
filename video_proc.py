@@ -1,4 +1,4 @@
-from recognizer import recognize
+from recognizer import recognize, get_durations
 from PIL import Image, ImageDraw, ImageFont
 from math import ceil
 import moviepy.editor as mp
@@ -51,22 +51,21 @@ def draw_subtitles(clip, duration=4):
         os.mkdir('temp')
     font = ImageFont.truetype('fonts/arial.ttf', size=clip.size[1]//30)
 
-    durations = []
-    for start in range(0, ceil(clip.duration), duration):
-        end = start + duration if start + duration < clip.duration else clip.duration
-
-        durations.append(end - start)
+    durations = get_durations(clip)
 
     audio_filenames = extract_audio(clip, durations)
     subtitles = recognize(audio_filenames, durations)
     cleanup()
 
     clips = []
-    for start, text in zip(range(0, ceil(clip.duration), duration), subtitles):
+    start = 0
+    for duration, text in zip(durations, subtitles):
         end = start + duration if start + duration < clip.duration else clip.duration
 
         subclip = clip.subclip(start, end)
         clips.append(add_overlay(subclip, text, font))
+
+        start += duration
 
     clip = mp.concatenate_videoclips(clips)
     cleanup('text.png')
