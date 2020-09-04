@@ -19,17 +19,36 @@ def extract_audio(clip, durations):
     return audio_filenames
 
 
+def divide_text(text, w, text_w):
+    coef = int(text_w // (0.8 * w)) + 1
+
+    # despite possibility, expected no more than 3 lines
+    for i in range(1, coef):
+        idx = text[i * (len(text)//coef):].find(' ') + i * (len(text)//coef)
+        text = text[:idx] + '\n' + text[idx+1:]
+    return text
+
+
 # returns transparent ImageClip instance with subtitles added
 def draw_overlay(text, size, font, duration):
     img = Image.new('RGBA', size, (0, 0, 0, 0))
     overlay = ImageDraw.Draw(img)
 
-    text_w, text_h = overlay.textsize(text, font)
     w, h = size
-    coords = ((w-text_w) // 2, (h//30) * 27)
+    text_w, text_h = overlay.textsize(text, font)
+    too_high = False
+    if text_w > 0.8 * w:
+        text = divide_text(text, w, text_w)
+        if text_w > 1.6 * w:
+            too_high = True
+    text_w, text_h = overlay.multiline_textsize(text, font)
+    if not too_high:
+        coords = ((w-text_w) // 2, (h//30) * 27)
+    else:
+        coords = ((w-text_w) // 2, ((h - text_h)//30) * 29)
 
     overlay.rectangle((coords, (coords[0]+text_w, coords[1]+text_h)), fill=(0, 0, 0, 230))
-    overlay.text(coords, text, fill=(255, 255, 255, 255), font=font)
+    overlay.multiline_text(coords, text, fill=(255, 255, 255, 255), font=font, align='center')
 
     img.save('temp/text.png')
     return mp.ImageClip('temp/text.png', duration=duration)
@@ -45,10 +64,12 @@ def add_overlay(clip, text, font):
 
 
 # returns the final version of VideoClip
-def draw_subtitles(clip, duration=4):
+def draw_subtitles(clip):
     # Creates temp directory for storing temporary files
     if not os.path.exists('temp'):
         os.mkdir('temp')
+    else:
+        cleanup()
     font = ImageFont.truetype('fonts/arial.ttf', size=clip.size[1]//30)
 
     durations = get_durations(clip)
