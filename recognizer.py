@@ -5,25 +5,43 @@ import numpy as np
 
 
 class Frame(object):
+    """
+    Data structure for holding audio bytes and time
+    at which this interval is played in the original audio
+    """
     def __init__(self, record, timestamp):
         self.record = record
         self.timestamp = timestamp
 
 
-def recognize(audio_filenames, durations):
+def recognize(audio_filenames):
+    """
+    Uses speech_recognition package to process
+    the passed list of WAV files
+    :param audio_filenames: List of audio filenames
+    :return: List containing subtitles in corresponding order
+    """
     texts = []
     r = sr.Recognizer()
-    for audio_filename, duration in zip(audio_filenames, durations):
+    for audio_filename in audio_filenames:
         with sr.AudioFile(audio_filename) as source:
             try:
                 audio = r.record(source)
                 texts.append(r.recognize_google(audio))
+            # sr.UnknownValueError is raised if the neural net couldn't
+            # recognize the provided speech, so then we add empty string
             except sr.UnknownValueError:
                 texts.append('')
     return texts
 
 
 def stereo_to_mono(audiodata):
+    """
+    Converts scipy's stereo data to mono
+    by finding the mean of 2 channels
+    :param audiodata: n x 2 scipy's audio data array
+    :return: Mono audio data array
+    """
     newaudiodata = np.zeros(len(audiodata), dtype='int16')
 
     for i, record in enumerate(audiodata):
@@ -34,6 +52,14 @@ def stereo_to_mono(audiodata):
 
 
 def frame_generator(audio, sample_rate, frame_duration):
+    """
+    Generates frames of given durations for VAD
+    detection algorithm
+    :param audio: Mono WAV audio
+    :param sample_rate: Bitrate of the sample
+    :param frame_duration: Duration of one frame
+    :return: Yields Frame instances
+    """
     n = int(sample_rate * (frame_duration / 1000.0) * 2)
     offset = 0
     timestamp = 0.0
@@ -45,6 +71,17 @@ def frame_generator(audio, sample_rate, frame_duration):
 
 
 def no_voice_intervals(vad, audio, rate, frame_duration):
+    """
+    Processes the passed audio using Voice Activity Detection
+    Creates the no_voice list containing 'quiet' intervals:
+    the interval of audio which algorithm classifies as
+    'silence/noise'
+    :param vad: webrtcvad.Vad() instance
+    :param audio: Mono WAV audio
+    :param rate: Bitrate of the audio
+    :param frame_duration: Duration of one frame
+    :return: Array of 'quiet' intervals
+    """
     no_voice = []
     t_start = None
     for frame in frame_generator(audio, rate, frame_duration):
@@ -60,6 +97,17 @@ def no_voice_intervals(vad, audio, rate, frame_duration):
 
 
 def _get_durations(no_voice, end, duration):
+    """
+    Processes 'quiet' intervals, generates close to optimal 'duration'
+    intervals with speech. At default duration is set to 4, so
+    function tries to stay as close to 4 seconds as it can,
+    but it has bottom constraint of 1.5 seconds, so
+    the 'duration' parameter cannot be set to 2.0 and less
+    :param no_voice: 'Quiet' intervals returned by no_voice_intervals function
+    :param end: The end of video timestamp
+    :param duration: Optimal duration of the interval containing speech
+    :return: Durations of the pieces containing speech in order
+    """
     assert duration > 2.0
     durations = []
     last_start = 0.0
@@ -99,10 +147,20 @@ def _get_durations(no_voice, end, duration):
 
 
 def get_durations(clip, agrs=1, duration=4, frame_duration=10):
+    """
+    Extracts audio from clip, writes it using needed parameters
+    to satisfy Vad() functions, then generates list of durations
+    :param clip: The initial VideoClip instance
+    :param agrs: The aggressiveness of the Vad() instance
+    :param duration: Optimal duration of the interval containing speech
+    :param frame_duration: Duration of one frame
+    :return: List of durations (intervals) containing speech
+    """
     audio = clip.audio
     audio.write_audiofile('temp/audio.wav', fps=48000, nbytes=2, codec='pcm_s16le')
 
     sample_rate, audiodata = wavfile.read('temp/audio.wav')
+    # Used only once, no need to foul the namespace
     from video_proc import cleanup
     cleanup('temp/audio.wav')
     audiodata = stereo_to_mono(audiodata)
