@@ -6,4 +6,4 @@ and WebRTC's VAD (Voice Activity Detection) to define the
 close to optimal division for audio to be processed.
 
 Input video should be at least 256x144, output video is in
-.avi format. Threads parameter is set due to author's laptop.
+.avi format. Threads parameter is set as for author's laptop.

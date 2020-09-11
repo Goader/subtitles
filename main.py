@@ -17,8 +17,8 @@ if __name__ == '__main__':
     try:
         filename = input('Enter filepath:\t\t')
         output_filename = input('Enter final name:\t')
-        if not os.path.exists(filename) or not os.path.exists(output_filename):
-            raise ValueError('At least one of given paths does not exist')
+        if not os.path.exists(filename):
+            raise ValueError('Given path does not exist')
         clip = VideoFileClip(filename)
         if clip.size[0] < 256 or clip.size[1] < 144:
             raise ValueError('Too small resolution. Must be: height >= 144, width >= 256')

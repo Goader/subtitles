@@ -79,7 +79,7 @@ def draw_overlay(text, size, font, duration):
         coords = ((w-text_w) // 2, ((h - text_h)//30) * 29)
 
     # The black rectangle behind the text to provide contrast and visibility at any background
-    overlay.rectangle((coords, (coords[0]+text_w, coords[1]+text_h)), fill=(0, 0, 0, 230))
+    overlay.rectangle((coords, (coords[0]+text_w, coords[1]+text_h+5)), fill=(0, 0, 0, 230))
     overlay.multiline_text(coords, text, fill=(255, 255, 255, 255), font=font, align='center')
 
     img.save('temp/text.png')

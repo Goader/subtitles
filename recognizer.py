@@ -146,13 +146,60 @@ def _get_durations(no_voice, end, duration):
     return durations
 
 
-def get_durations(clip, agrs=1, duration=4, frame_duration=10):
+def divide_by_speech(audio):
+    """
+    Tries do divide one particular audio interval into
+    more by checking for speech via speech_recognition tool
+    :param audio: AudioClip of duration > 2.5 * opt_duration
+    :return: List of new durations after dividing this one
+    """
+    margin = 2
+    offset = margin
+    last_start = 0
+    durations = []
+    while offset + margin <= audio.duration:
+        filename = f'temp/d{offset}.wav'
+        audio.subclip(offset, offset+2).\
+            write_audiofile(filename, codec='pcm_s16le')
+        if not recognize([filename])[0]:  # returns list, passing single filename -> single string
+            durations.append(offset+1 - last_start)
+            last_start = offset+1
+            offset = last_start + margin
+        else:
+            offset += 1
+    if last_start < audio.duration:
+        durations.append(audio.duration - last_start)
+    return durations
+
+
+def extra_division(audio, durations, opt_duration):
+    """
+    Creates new list of durations by checking if long
+    intervals contain speech using speech_recognition tool
+    :param audio: AudioClip extracted from the original video
+    :param durations: Current list of durations based on VAD
+    :param opt_duration: Optimal duration of the interval containing speech
+    :return: Edited list of durations
+    """
+    offset = 0
+    new_durations = []
+    for duration in durations:
+        if duration > 2.5 * opt_duration:
+            extra_durations = divide_by_speech(audio.subclip(offset, offset+duration))
+            new_durations.extend(extra_durations)
+        else:
+            new_durations.append(duration)
+        offset += duration
+    return new_durations
+
+
+def get_durations(clip, agrs=1, opt_duration=4, frame_duration=10):
     """
     Extracts audio from clip, writes it using needed parameters
     to satisfy Vad() functions, then generates list of durations
     :param clip: The initial VideoClip instance
     :param agrs: The aggressiveness of the Vad() instance
-    :param duration: Optimal duration of the interval containing speech
+    :param opt_duration: Optimal duration of the interval containing speech
     :param frame_duration: Duration of one frame
     :return: List of durations (intervals) containing speech
     """
@@ -160,7 +207,7 @@ def get_durations(clip, agrs=1, duration=4, frame_duration=10):
     audio.write_audiofile('temp/audio.wav', fps=48000, nbytes=2, codec='pcm_s16le')
 
     sample_rate, audiodata = wavfile.read('temp/audio.wav')
-    # Used only once, no need to foul the namespace
+    # Used only twice, no need to foul the namespace
     from video_proc import cleanup
     cleanup('temp/audio.wav')
     audiodata = stereo_to_mono(audiodata)
@@ -168,5 +215,7 @@ def get_durations(clip, agrs=1, duration=4, frame_duration=10):
     vad = webrtcvad.Vad(agrs)
 
     no_voice = no_voice_intervals(vad, audiodata, sample_rate, frame_duration)
-    durations = _get_durations(no_voice, clip.duration, duration)
+    durations = _get_durations(no_voice, clip.duration, opt_duration)
+    durations = extra_division(clip.audio, durations, opt_duration)
+    cleanup()
     return durations
